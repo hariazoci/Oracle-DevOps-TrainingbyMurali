@@ -73,3 +73,6 @@
   73 git add .
   74 git commit -m "Commit "
   75 git rebase --continue
+
+  Test
+  merge pull request test from fork
