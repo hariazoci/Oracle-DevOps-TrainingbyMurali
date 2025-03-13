@@ -1,0 +1,1 @@
+ssh-keygen -y -f /c/Users/mural/Downloads/98867212-lab.user20_2025-03-13T00_27_57.353Z.pem > /c/Users/mural/Downloads/id_rsa.pub

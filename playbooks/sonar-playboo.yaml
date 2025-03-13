@@ -1,0 +1,116 @@
+- name: Install SonarQube on Oracle Linux 8 
+  hosts: webservers
+  become: yes
+  vars:
+    sonar_version: "10.3.0.82913"
+    sonar_user: "sonarqube"
+    sonar_group: "sonarqube"
+    sonar_home: "/opt/sonarqube"
+    sonar_service: "/etc/systemd/system/sonarqube.service"
+
+  tasks:
+    - name: Install required dependencies
+      yum:
+        name:
+          - java-11-openjdk
+          - java-11-openjdk-devel
+          - unzip
+          - wget
+          - curl
+        state: present
+
+    - name: Create SonarQube group
+      group:
+        name: "{{ sonar_group }}"
+        state: present
+
+    - name: Create SonarQube user
+      user:
+        name: "{{ sonar_user }}"
+        group: "{{ sonar_group }}"
+        shell: /bin/bash
+        home: "{{ sonar_home }}"
+        createhome: no
+
+    - name: Download SonarQube
+      get_url:
+        url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-{{ sonar_version }}.zip"
+        dest: "/tmp/sonarqube.zip"
+    - name: Extract SonarQube
+      unarchive:
+        src: "/tmp/sonarqube.zip"
+        dest: "/opt/"
+        remote_src: yes
+        owner: "{{ sonar_user }}"
+        group: "{{ sonar_group }}"
+      register: extract_result
+
+    - name: Find extracted SonarQube folder
+      shell: "ls -d /opt/sonarqube-* | head -n 1"
+      register: sonar_folder
+      changed_when: false
+
+    - name: Rename extracted directory to /opt/sonarqube
+      command: mv "{{ sonar_folder.stdout }}" /opt/sonarqube
+      args:
+        creates: "/opt/sonarqube/conf/sonar.properties"
+      when: sonar_folder.stdout | length > 0
+    - name: Update sonar.properties for embedded database
+      lineinfile:
+        path: "{{ sonar_home }}/conf/sonar.properties"
+        regexp: "^#sonar.web.port="
+        line: "sonar.web.port=9000"
+
+    - name: Set permissions for SonarQube directory
+      file:
+        path: "{{ sonar_home }}"
+        state: directory
+        owner: "{{ sonar_user }}"
+        group: "{{ sonar_group }}"
+        mode: '0755'
+        recurse: yes
+
+    - name: Create systemd service file for SonarQube
+      copy:
+        dest: "{{ sonar_service }}"
+        content: |
+          [Unit]
+          Description=SonarQube service
+          After=syslog.target network.target
+
+          [Service]
+          Type=simple
+          User={{ sonar_user }}
+          Group={{ sonar_group }}
+          PermissionsStartOnly=true
+          ExecStart=/bin/bash -c 'nohup {{ sonar_home }}/bin/linux-x86-64/sonar.sh start'
+          ExecStop=/bin/bash -c 'nohup {{ sonar_home }}/bin/linux-x86-64/sonar.sh stop'
+          StandardOutput=syslog
+          LimitNOFILE=65536
+          LimitNPROC=4096
+          TimeoutStartSec=5
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: Reload systemd
+
+    - name: Enable and start SonarQube service
+      systemd:
+        name: sonarqube
+        enabled: yes
+        state: started
+
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+
+----------------------------------
+
+sudo -u sonarqube /opt/sonarqube/bin/linux-x86-64/sonar.sh start
+tail -f /opt/sonarqube/logs/sonar.log
+sudo systemctl start sonarqube
+sudo systemctl enable sonarqube
+sudo systemctl status sonarqube
