@@ -21,3 +21,14 @@
    22  sudo firewall-cmd --reload
    23  sudo firewall-cmd --list-ports
    24  sestatus
+
+   ____________________________________
+   SonarScanner-Installation 
+   wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+   24  unzip sonar-scanner-cli-5.0.1.3006-linux.zip
+   25  sudo mv sonar-scanner-5.0.1.3006-linux /opt/sonar-scanner
+   26  sudo nano /etc/profile - Edit this file add the below line - /opt/sonar-scanner/bin/sonar-scanner
+   27  source /etc/profile
+   28  sonar-scanner -v
+   29  /opt/sonar-scanner/
+   30  cd /opt/sonar-scanner/
