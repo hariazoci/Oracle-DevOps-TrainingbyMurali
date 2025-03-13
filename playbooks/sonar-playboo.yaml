@@ -105,3 +105,12 @@
     - name: Reload systemd
       systemd:
         daemon_reload: yes
+
+
+----------------------------------
+
+sudo -u sonarqube /opt/sonarqube/bin/linux-x86-64/sonar.sh start
+tail -f /opt/sonarqube/logs/sonar.log
+sudo systemctl start sonarqube
+sudo systemctl enable sonarqube
+sudo systemctl status sonarqube
