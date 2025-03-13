@@ -1,0 +1,57 @@
+pipeline {
+    agent any
+
+    environment {
+        SONAR_SERVER = 'Sonar-Server'
+        SONAR_SCANNER_PATH = '/opt/sonar-scanner/bin/sonar-scanner'
+        PROJECT_NAME = 'DevSecOps-Batch-CodeQuality-Pipeline'
+        PROJECT_KEY = 'DevSecOps-Batch-CodeQuality-Pipeline'
+        SONAR_URL = 'http://13.232.185.241:9000'
+    }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Msocial123/docker-casestudy.git'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('Sonar-Server') {
+                    withCredentials([string(credentialsId: 'Sonar-Token', variable: 'SONAR_AUTH_TOKEN')]) {
+                        sh """
+                            ${SONAR_SCANNER_PATH} \
+                            -Dsonar.projectKey=${PROJECT_KEY} \
+                            -Dsonar.projectName=${PROJECT_NAME} \
+                            -Dsonar.sources=. \
+                            -Dsonar.host.url=${SONAR_URL} \
+                            -Dsonar.login=${SONAR_AUTH_TOKEN}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    timeout(time: 5, unit: 'MINUTES') {
+                        waitForQualityGate abortPipeline: true
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline execution completed!'
+        }
+        success {
+            echo 'Code quality check passed!'
+        }
+        failure {
+            echo 'Code quality check failed!'
+        }
+    }
+}
